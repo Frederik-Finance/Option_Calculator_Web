@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Option Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+    <style>
+        /* Add CSS styles for the HSBC theme here */
+        /* Use the HSBC colors for the text and background */
+        body {
+            color: #af000d;
+            background-color: #FFFFFF;
+        }
+
+        /* Style the form fields and button */
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+
+
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-family: Arial, sans-serif;
+
+        }
+
+        input[type="text"] {
+            width: 300px;
+            height: 16px;
+            font-size: 10px;
+            border: 1px solid #af000d;
+            border-radius: 2px;
+            padding: 4px;
+            margin-bottom: 8px;
+            font-family: Arial, sans-serif;
+
+        }
+
+        button[type="button"] {
+            width: 120px;
+            height: 40px;
+            font-size: 16px;
+            background-color: #af000d;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+
+        }
+
+        button[type="button"]:hover {
+            background-color: #af000d;
+            font-family: Arial, sans-serif;
+
+        }
+
+        #timeUnit {
+            background-color: #af000d;
+            /* HSBC blue */
+            color: white;
+            font-family: sans-serif;
+        }
+
+        #timeUnit option {
+            background-color: white;
+            color: #af000d;
+            /* HSBC blue */
+            font-family: sans-serif;
+        }
+
+
+        /* Style the result and chart containers */
+        #result {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 32px;
+            font-family: Arial, sans-serif;
+
+        }
+
+        #chart {
+            width: 50px;
+            height: 100px;
+            margin-top: 32px;
+            font-family: Arial, sans-serif;
+
+        }
+
+        #container {
+            display: flex;
+            flex-direction: row;
+            font-family: Arial, sans-serif;
+
+        }
+
+        nav {
+            background-color: #af000d;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 16px;
+            font-family: Arial, sans-serif;
+
+        }
+
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            text-align: center;
+            font-family: Arial, sans-serif;
+
+        }
+
+        nav li {
+            margin-right: 16px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+
+
+
+        }
+
+        nav a {
+            color: #fff;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+
+        }
+
+        nav a:hover {
+            color: #ccc;
+        }
+
+        .wrapper {
+            height: 1000px;
+            width: 1600px;
+        }
+
+        #result,
+        #result2 {
+            text-align: center;
+            font-family: Arial, sans-serif;
+
+        }
+
+        #disclaimer {
+            background-color: #202124;
+
+            color: #ffffff;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            padding: 16px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <body>
+        <nav>
+            <ul>
+                <li><a href="#">Frederik's Simple Option Calculator</a></li>
+            </ul>
+        </nav>
+        <br>
+        <br>
+        <br>
+        <!-- Your existing content goes here -->
+        <div id="container">
+            <form>
+                <label for="stockPrice">Stock Price:</label>
+                <input type="text" id="stockPrice" value="100">
+                <br>
+                <label for="strikePrice">Strike Price:</label>
+                <input type="text" id="strikePrice" value="110">
+                <br>
+                <label for="timeToExpiration">Time to Expiration:</label>
+                <input type="text" id="timeToExpiration" value="1">
+                <select id="timeUnit">
+                    <option value="1">Days</option>
+                    <option value="24">hours</option>
+                </select>
+                <br>
+                <label for="riskFreeRate">Risk-Free Rate (%):</label>
+                <input type="text" id="riskFreeRate" value="3">
+                <br>
+                <label for="volatility">Volatility (%):</label>
+                <input type="text" id="volatility" value="20">
+                <br>
+                <label for="numSimulations">Number of Simulations:</label>
+                <input type="text" id="numSimulations" value="1000">
+                <br>
+                <button type="button" onclick="calculateOptionPrice()">Calculate</button>
+            </form>
+            <div class="wrapper">
+                <canvas id="chart"></canvas>
+                <div id="result">Option Price (Black-Scholes)</div>
+                <div id="result2">Option Price (Monte-Carlo)</div>
+            </div>
+        </div>
+        <div id="disclaimer">
+            <p>It is important to note that the Option Calculator is for educational and informational purposes only and
+                does not constitute financial advice. The results generated by the calculator should not be taken as a
+                guarantee of future performance or financial success. It is the user's responsibility to conduct their
+                own research and due diligence when making financial decisions. The developer and contributors of the
+                Option Calculator are not liable for any financial losses or damages resulting from the use of this
+                tool. Please consult a financial advisor or professional before making any financial decisions.</p>
+        </div>
+        <script>
+            let stockPrice = 100;
+            let strikePrice = 110;
+            let timeToExpiration = 1;
+            let riskFreeRate = 0.03;
+            let volatility = 0.2;
+            let numSimulations = 1000;
+
+            let optionPrice = 0;
+            let optionPriceHistory = [];
+
+            function erf(x) {
+                // Constants
+                const a1 = 0.254829592;
+                const a2 = -0.284496736;
+                const a3 = 1.421413741;
+                const a4 = -1.453152027;
+                const a5 = 1.061405429;
+                const p = 0.3275911;
+
+                // Save the sign of x
+                let sign = 1;
+                if (x < 0) {
+                    sign = -1;
+                }
+                x = Math.abs(x);
+
+                // A&S formula 7.1.26
+                let t = 1.0 / (1.0 + p * x);
+                let y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+                return sign * y;
+            }
+
+
+            function GaussianRandom() {
+                let u = 0;
+                let v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            }
+
+            function GaussianCDF(x) {
+                return 0.5 * (1.0 + erf(x / Math.sqrt(2.0)));
+            }
+
+            function BlackScholesCall(stockPrice, strikePrice, timeToExpiration, riskFreeRate, volatility) {
+                let d1 = (Math.log(stockPrice / strikePrice) + (riskFreeRate + volatility * volatility / 2.0) * timeToExpiration) / (volatility * Math.sqrt(timeToExpiration));
+                let d2 = d1 - volatility * Math.sqrt(timeToExpiration);
+                let callPrice = stockPrice * GaussianCDF(d1) - strikePrice * Math.exp(-riskFreeRate * timeToExpiration) * GaussianCDF(d2);
+                return callPrice;
+            }
+
+            let chart;
+            function calculateOptionPrice() {
+                if (chart) {
+                    chart.destroy();
+                }
+
+                stockPrice = parseFloat(document.getElementById("stockPrice").value);
+                strikePrice = parseFloat(document.getElementById("strikePrice").value);
+                timeToExpiration = parseFloat(document.getElementById("timeToExpiration").value);
+                riskFreeRate = parseFloat(document.getElementById("riskFreeRate").value) / 100;
+                volatility = parseFloat(document.getElementById("volatility").value) / 100;
+                numSimulations = parseInt(document.getElementById("numSimulations").value);
+                timeUnit = document.getElementById("timeUnit").value;
+                timeToExpiration = timeToExpiration / timeUnit;
+                console.log(timeToExpiration)
+
+                // if (timeUnit === "hours") {
+                //     timeToExpiration *= 60;
+                // } else if (timeUnit === "days") {
+                //     timeToExpiration *= 1440;
+                // }
+
+                optionPrice = BlackScholesCall(stockPrice, strikePrice, timeToExpiration, riskFreeRate, volatility);
+                document.getElementById("result").innerHTML = "Option price (Black-Scholes): $" + optionPrice.toFixed(2);
+
+                optionPriceHistory = [];
+                if (optionPriceHistory.length > 0) optionPriceHistory = []
+                for (let i = 0; i < numSimulations; i++) {
+                    let randomStockPrice = stockPrice * (1 + (riskFreeRate - 0.5 * volatility * volatility) * timeToExpiration + volatility * Math.sqrt(timeToExpiration) * GaussianRandom());
+                    let randomOptionPrice = BlackScholesCall(randomStockPrice, strikePrice, timeToExpiration, riskFreeRate, volatility);
+                    optionPriceHistory.push(randomOptionPrice);
+                }
+
+                function removeNaN(arr) {
+                    // Return a new array that only includes non-NaN values
+                    return arr.filter(value => !Number.isNaN(value));
+                }
+
+
+                function average(arr) {
+                    arr = removeNaN(arr)
+                    // Add up all of the values in the array
+                    const sum = arr.reduce((total, value) => total + value, 0);
+
+                    // Return the average
+                    return sum / arr.length;
+                }
+
+                function average(arr) {
+                    // Remove all NaN values from the array
+                    const filteredArr = removeNaN(arr);
+
+                    // Add up all of the values in the array
+                    const sum = filteredArr.reduce((total, value) => total + value, 0);
+
+                    // Return the average
+                    return sum / filteredArr.length;
+                }
+
+
+                const averageOptionPrice = average(optionPriceHistory);
+                document.getElementById("result2").innerHTML = `Option price (Monte-Carlo, N=${numSimulations} simulations): $` + averageOptionPrice.toFixed(2);
+
+
+                // let optionPayoffs = [];
+                // let stockPrices = []
+                // for (let i = 0; i < numSimulations; i++) {
+                //     let simulatedStockPrice = stockPrices[i];
+                //     let optionPayoff = Math.max(simulatedStockPrice - strikePrice, 0);
+                //     optionPayoffs.push(optionPayoff);
+                // }
+
+
+
+                chart = new Chart(document.getElementById("chart"), {
+                    type: "line",
+
+                    data: {
+                        labels: optionPriceHistory,
+                        datasets: [{
+                            // label: "Option Price History",
+                            // data: optionPriceHistory,
+                            // backgroundColor: "rgba(0, 0, 255, 0.2)",
+                            // borderColor: "rgba(0, 0, 255, 1)",
+                            // borderWidth: 1
+
+                            label: 'Option Price (Simulation)',
+                            data: optionPriceHistory,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+
+                    options: {
+                        responsive: true,
+                        scales: {
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }]
+                        }
+                    }
+                });
+
+
+                const chartElement = document.getElementById('chart');
+                this.chart.resize(100, 100);
+
+
+
+
+                // let chart = new Chart(document.getElementById("chart"), {
+                //     type: "line",
+                //     data: {
+                //         labels: stockPrices,
+                //         datasets: [{
+                //             label: "Option Price",
+                //             data: optionPrices,
+                //             backgroundColor: "rgba(0, 0, 255, 0.2)",
+                //             borderColor: "rgba(0, 0, 255, 1)",
+                //             borderWidth: 1
+                //         }, {
+                //             label: "Option Payoff",
+                //             data: optionPayoffs,
+                //             backgroundColor: "rgba(255, 0, 0, 0.2)",
+                //             borderColor: "rgba(255, 0, 0, 1)",
+                //             borderWidth: 1
+                //         }]
+                //     },
+                //     options: {
+                //         scales: {
+                //             yAxes: [{
+                //                 ticks: {
+                //                     beginAtZero: true
+                //                 }
+                //             }]
+                //         }
+                //     }
+                // });
+
+
+
+
+            }
+
+        </script>
+    </body>
+
+
+
+</html>
